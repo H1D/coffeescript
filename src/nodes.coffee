@@ -1406,11 +1406,13 @@ exports.Code = class Code extends Base
 
     # Handle bound functions early.
     if @bound and not @context
-      @context = '_this'
+      @context = 'this'
+      ###
       wrapper = new Code [new Param new Literal @context], new Block [this]
       boundfunc = new Call(wrapper, [new Literal 'this'])
       boundfunc.updateLocationDataIfMissing @locationData
       return boundfunc.compileNode(o)
+      ###
 
     o.scope         = del(o, 'classScope') or @makeScope o.scope
     o.scope.shared  = del(o, 'sharedScope')
@@ -1450,7 +1452,7 @@ exports.Code = class Code extends Base
       node.error "multiple parameters named #{name}" if name in uniqs
       uniqs.push name
     @body.makeReturn() unless wasEmpty or @noReturn
-    code = 'function'
+    code = if @bound then '' else 'function'
     code += '*' if @isGenerator
     code += ' ' + @name if @ctor
     code += '('
@@ -1458,7 +1460,8 @@ exports.Code = class Code extends Base
     for p, i in params
       if i then answer.push @makeCode ", "
       answer.push p...
-    answer.push @makeCode ') {'
+    maybeArrow = if @bound then '=>' else ' '
+    answer.push @makeCode ")#{maybeArrow} {"
     answer = answer.concat(@makeCode("\n"), @body.compileWithDeclarations(o), @makeCode("\n#{@tab}")) unless @body.isEmpty()
     answer.push @makeCode '}'
 
